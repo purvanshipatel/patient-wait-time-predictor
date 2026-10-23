@@ -25,7 +25,6 @@
         header .title-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
         header h1 { font-size: 24px; font-weight: 700; }
         header p { color: #93c5fd; font-size: 14px; margin-top: 4px; }
-        .badge-live { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600; }
 
         main { max-width: 1200px; margin: 28px auto; padding: 0 20px; }
 
@@ -80,9 +79,8 @@
     <div class="title-row">
         <div>
             <h1>Emergency Dept Patient Queue & Predictor</h1>
-            <p>AI-Powered Wait Time Estimation with PostgreSQL Persistence</p>
+            <p>Machine-learning-based doctor waiting-time estimation</p>
         </div>
-        <div class="badge-live">PostgreSQL Connected</div>
     </div>
 </header>
 
@@ -106,7 +104,7 @@
     <!-- Navigation Tabs -->
     <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab(event, 'intake-tab')">Patient Intake & Predict</button>
-        <button class="tab-btn" onclick="switchTab(event, 'queue-tab'); loadQueue();">Live Queue (PostgreSQL)</button>
+        <button class="tab-btn" onclick="switchTab(event, 'queue-tab'); loadQueue();">Live Queue</button>
     </div>
 
     <!-- TAB 1: Intake & Prediction -->
@@ -115,6 +113,7 @@
             <h2 style="font-size: 18px; margin-bottom: 20px; color: var(--navy);">Patient Clinical & Triage Details</h2>
             <form id="predictForm">
                 <div class="grid">
+                    <!-- Triage Level -->
                     <div class="field">
                         <label for="triage_level">Triage Level (1 = Resuscitation, 5 = Non-urgent)</label>
                         <select id="triage_level" required>
@@ -127,26 +126,111 @@
                         </select>
                     </div>
 
+                    <!-- Chief Complaint Dropdown -->
                     <div class="field">
                         <label for="chief_complaint">Chief Complaint</label>
-                        <input id="chief_complaint" required placeholder="e.g. Chest Pain, Shortness of Breath" value="Chest Pain">
+                        <select id="chief_complaint" required>
+                            <option value="">Select Chief Complaint</option>
+                            <option value="Abdominal pain">Abdominal pain</option>
+                            <option value="Active bleeding">Active bleeding</option>
+                            <option value="Altered consciousness">Altered consciousness</option>
+                            <option value="Anaphylaxis">Anaphylaxis</option>
+                            <option value="Back pain">Back pain</option>
+                            <option value="Cardiac arrest">Cardiac arrest</option>
+                            <option value="Chest pain" selected>Chest pain</option>
+                            <option value="Cold symptoms">Cold symptoms</option>
+                            <option value="Ear pain">Ear pain</option>
+                            <option value="Fracture">Fracture</option>
+                            <option value="Head injury">Head injury</option>
+                            <option value="Laceration">Laceration</option>
+                            <option value="Major trauma">Major trauma</option>
+                            <option value="Mild fever">Mild fever</option>
+                            <option value="Minor cut">Minor cut</option>
+                            <option value="Moderate chest pain">Moderate chest pain</option>
+                            <option value="Prescription refill">Prescription refill</option>
+                            <option value="Rash">Rash</option>
+                            <option value="Respiratory failure">Respiratory failure</option>
+                            <option value="Septic shock">Septic shock</option>
+                            <option value="Severe dyspnea">Severe dyspnea</option>
+                            <option value="Severe infection">Severe infection</option>
+                            <option value="Sprain">Sprain</option>
+                            <option value="Stroke">Stroke</option>
+                            <option value="Urinary symptoms">Urinary symptoms</option>
+                        </select>
                     </div>
 
+                    <!-- Department Dropdown -->
                     <div class="field">
                         <label for="department">Department</label>
-                        <input id="department" required placeholder="e.g. Emergency" value="Emergency">
+                        <select id="department" required>
+                            <option value="">Select Department</option>
+                            <option value="Cardiology">Cardiology</option>
+                            <option value="Emergency" selected>Emergency</option>
+                            <option value="General Surgery">General Surgery</option>
+                            <option value="Neurology">Neurology</option>
+                            <option value="Obs & Gynae">Obs & Gynae</option>
+                            <option value="Orthopedics">Orthopedics</option>
+                            <option value="Pediatrics">Pediatrics</option>
+                            <option value="Psychiatry">Psychiatry</option>
+                            <option value="Trauma">Trauma</option>
+                        </select>
                     </div>
 
+                    <!-- Attending Physician Dropdown -->
                     <div class="field">
                         <label for="attending_physician">Attending Physician</label>
-                        <input id="attending_physician" required placeholder="e.g. Dr. Smith" value="Dr. Smith">
+                        <select id="attending_physician" required>
+                            <option value="">Select Attending Physician</option>
+                            <option value="Dr.AA" selected>Dr.AA</option>
+                            <option value="Dr.AB">Dr.AB</option>
+                            <option value="Dr.BA">Dr.BA</option>
+                            <option value="Dr.BB">Dr.BB</option>
+                            <option value="Dr.CA">Dr.CA</option>
+                            <option value="Dr.CB">Dr.CB</option>
+                            <option value="Dr.DA">Dr.DA</option>
+                            <option value="Dr.DB">Dr.DB</option>
+                            <option value="Dr.EA">Dr.EA</option>
+                            <option value="Dr.EB">Dr.EB</option>
+                            <option value="Dr.FA">Dr.FA</option>
+                            <option value="Dr.FB">Dr.FB</option>
+                            <option value="Dr.GA">Dr.GA</option>
+                            <option value="Dr.GB">Dr.GB</option>
+                            <option value="Dr.HA">Dr.HA</option>
+                            <option value="Dr.HB">Dr.HB</option>
+                            <option value="Dr.IA">Dr.IA</option>
+                            <option value="Dr.IB">Dr.IB</option>
+                            <option value="Dr.JA">Dr.JA</option>
+                            <option value="Dr.JB">Dr.JB</option>
+                            <option value="Dr.KA">Dr.KA</option>
+                            <option value="Dr.KB">Dr.KB</option>
+                            <option value="Dr.LA">Dr.LA</option>
+                            <option value="Dr.LB">Dr.LB</option>
+                            <option value="Dr.MA">Dr.MA</option>
+                            <option value="Dr.MB">Dr.MB</option>
+                            <option value="Dr.NA">Dr.NA</option>
+                            <option value="Dr.NB">Dr.NB</option>
+                            <option value="Dr.OA">Dr.OA</option>
+                            <option value="Dr.PA">Dr.PA</option>
+                            <option value="Dr.QA">Dr.QA</option>
+                            <option value="Dr.RA">Dr.RA</option>
+                            <option value="Dr.SA">Dr.SA</option>
+                            <option value="Dr.TA">Dr.TA</option>
+                            <option value="Dr.UA">Dr.UA</option>
+                            <option value="Dr.VA">Dr.VA</option>
+                            <option value="Dr.WA">Dr.WA</option>
+                            <option value="Dr.XA">Dr.XA</option>
+                            <option value="Dr.YA">Dr.YA</option>
+                            <option value="Dr.ZA">Dr.ZA</option>
+                        </select>
                     </div>
 
+                    <!-- Patient Age -->
                     <div class="field">
                         <label for="patient_age">Patient Age</label>
                         <input id="patient_age" type="number" min="0" max="120" required value="48">
                     </div>
 
+                    <!-- Patient Gender -->
                     <div class="field">
                         <label for="patient_gender">Patient Gender</label>
                         <select id="patient_gender" required>
@@ -156,21 +240,38 @@
                         </select>
                     </div>
 
+                    <!-- Insurance Type Dropdown -->
                     <div class="field">
                         <label for="insurance_type">Insurance Type</label>
-                        <input id="insurance_type" required placeholder="e.g. Medicare, Private" value="Medicare">
+                        <select id="insurance_type" required>
+                            <option value="">Select Insurance Type</option>
+                            <option value="Government">Government</option>
+                            <option value="Medicaid">Medicaid</option>
+                            <option value="Medicare" selected>Medicare</option>
+                            <option value="Private">Private</option>
+                            <option value="Self-pay">Self-pay</option>
+                        </select>
                     </div>
 
+                    <!-- Length of Stay -->
                     <div class="field">
                         <label for="length_of_stay_hrs">Expected Length of Stay (hrs)</label>
                         <input id="length_of_stay_hrs" type="number" step="0.1" min="0" required value="3.5">
                     </div>
 
+                    <!-- Disposition Dropdown -->
                     <div class="field">
                         <label for="disposition">Disposition</label>
-                        <input id="disposition" required placeholder="e.g. Admitted, Discharged" value="Discharged">
+                        <select id="disposition" required>
+                            <option value="Admitted">Admitted</option>
+                            <option value="Discharged home" selected>Discharged home</option>
+                            <option value="Transferred">Transferred</option>
+                            <option value="AMA">AMA (Against Medical Advice)</option>
+                            <option value="Expired">Expired</option>
+                        </select>
                     </div>
 
+                    <!-- Readmitted 30d -->
                     <div class="field">
                         <label for="readmitted_30d">Readmitted Within 30 Days</label>
                         <select id="readmitted_30d" required>
@@ -179,49 +280,61 @@
                         </select>
                     </div>
 
+                    <!-- Satisfaction Score -->
                     <div class="field">
                         <label for="satisfaction_score">Historical Satisfaction Score (1-5)</label>
                         <input id="satisfaction_score" type="number" step="0.1" min="1" max="5" required value="4.2">
                     </div>
 
+                    <!-- Arrival Hour -->
                     <div class="field">
                         <label for="arrival_hour">Arrival Hour (0 - 23)</label>
                         <input id="arrival_hour" type="number" min="0" max="23" required value="14">
                     </div>
 
+                    <!-- Arrival Day -->
                     <div class="field">
                         <label for="arrival_dayofweek">Arrival Day (0 = Sun, 6 = Sat)</label>
                         <input id="arrival_dayofweek" type="number" min="0" max="6" required value="2">
                     </div>
 
+                    <!-- Arrival Month -->
                     <div class="field">
                         <label for="arrival_month">Arrival Month (1 - 12)</label>
                         <input id="arrival_month" type="number" min="1" max="12" required value="10">
                     </div>
 
+                    <!-- Age Group Dropdown -->
                     <div class="field">
                         <label for="age_group">Age Group</label>
-                        <input id="age_group" required placeholder="e.g. Adult, Senior" value="Adult">
+                        <select id="age_group" required>
+                            <option value="">Select Age Group</option>
+                            <option value="0-17">0-17 (Pediatric)</option>
+                            <option value="18-34">18-34 (Young Adult)</option>
+                            <option value="35-49" selected>35-49 (Adult)</option>
+                            <option value="50-64">50-64 (Middle-aged)</option>
+                            <option value="65+">65+ (Senior)</option>
+                        </select>
                     </div>
                 </div>
 
-                <button type="submit" id="btnPredict" class="btn-submit">Generate Wait Estimate & Log to Database</button>
+                <button type="submit" id="btnPredict" class="btn-submit">Generate Wait Estimate</button>
                 <div id="error-msg"></div>
 
                 <div id="resultBox" class="result-box">
                     <h4>Estimated Doctor Waiting Time</h4>
                     <div id="predictedTime" class="time">-- minutes</div>
-                    <p id="recordStatusTag">Logged into PostgreSQL database</p>
+                    <p id="recordStatusTag">Logged into patient queue</p>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- TAB 2: PostgreSQL Queue History -->
+    <!-- TAB 2: Live Queue History -->
     <div id="queue-tab" class="tab-content">
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-                <h2 style="font-size: 18px; color: var(--navy);">Emergency Room Queue (Stored in PostgreSQL)</h2>
+                <h2 style="font-size: 18px; color: var(--navy);">Live Emergency Room Queue</h2>
                 <button onclick="loadQueue()" style="background:#f1f5f9; border:1px solid var(--border); padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600;">Refresh</button>
             </div>
             
@@ -233,13 +346,14 @@
                             <th>Time Logged</th>
                             <th>Triage</th>
                             <th>Complaint</th>
+                            <th>Physician</th>
                             <th>Age / Sex</th>
                             <th>Est. Wait</th>
                             <th>Queue Status</th>
                         </tr>
                     </thead>
                     <tbody id="queue-body">
-                        <tr><td colspan="7" style="text-align:center;">Loading queue records...</td></tr>
+                        <tr><td colspan="8" style="text-align:center;">Loading queue records...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -273,7 +387,7 @@
             const records = await res.json();
             const tbody = document.getElementById('queue-body');
             if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No patients logged yet. Run a prediction to create your first record.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">No patients logged yet. Run a prediction to create your first record.</td></tr>';
                 return;
             }
             tbody.innerHTML = records.map(r => `
@@ -282,6 +396,7 @@
                     <td>${r.created_at}</td>
                     <td><span class="status-badge" style="background:#e0f2fe; color:#0369a1;">Level ${r.triage_level}</span></td>
                     <td>${r.chief_complaint}</td>
+                    <td>${r.attending_physician}</td>
                     <td>${r.patient_age} (${r.patient_gender[0]})</td>
                     <td><strong>${r.predicted_wait_min} min</strong></td>
                     <td>
@@ -315,7 +430,7 @@
         const resBox = document.getElementById("resultBox");
         err.innerText = "";
         btn.disabled = true;
-        btn.innerText = "Estimating & Saving to PostgreSQL...";
+        btn.innerText = "Estimating...";
 
         const numericFields = ["triage_level", "patient_age", "length_of_stay_hrs", "readmitted_30d", "satisfaction_score", "arrival_hour", "arrival_dayofweek", "arrival_month"];
         const fields = ["triage_level", "chief_complaint", "department", "attending_physician", "patient_age", "patient_gender", "insurance_type", "length_of_stay_hrs", "disposition", "readmitted_30d", "satisfaction_score", "arrival_hour", "arrival_dayofweek", "arrival_month", "age_group"];
@@ -336,15 +451,27 @@
             if (!resp.ok) throw new Error(data.error || "Prediction request failed.");
 
             document.getElementById("predictedTime").innerText = data.predicted_waiting_time_minutes + " minutes";
-            document.getElementById("recordStatusTag").innerText = `Saved to PostgreSQL as Patient Record #${data.record_id}`;
+            document.getElementById("recordStatusTag").innerText = `Logged as Patient Record #${data.record_id}`;
             resBox.style.display = "block";
             loadStats();
         } catch (error) {
             err.innerText = error.message;
         } finally {
             btn.disabled = false;
-            btn.innerText = "Generate Wait Estimate & Log to Database";
+            btn.innerText = "Generate Wait Estimate";
         }
+    });
+
+    // Auto-update age group when patient age changes
+    document.getElementById("patient_age").addEventListener("input", function() {
+        const age = parseInt(this.value, 10);
+        const ageSelect = document.getElementById("age_group");
+        if (isNaN(age)) return;
+        if (age <= 17) ageSelect.value = "0-17";
+        else if (age <= 34) ageSelect.value = "18-34";
+        else if (age <= 49) ageSelect.value = "35-49";
+        else if (age <= 64) ageSelect.value = "50-64";
+        else ageSelect.value = "65+";
     });
 
     // Initial load

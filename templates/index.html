@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Dept - Patient Queue & Wait Time System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-dark: #0369a1;
+            --navy: #0f172a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); line-height: 1.5; }
+        
+        header { background: linear-gradient(135deg, #0f172a, #1e3a8a); color: white; padding: 28px 6%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        header .title-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        header h1 { font-size: 24px; font-weight: 700; }
+        header p { color: #93c5fd; font-size: 14px; margin-top: 4px; }
+        .badge-live { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 600; }
+
+        main { max-width: 1200px; margin: 28px auto; padding: 0 20px; }
+
+        /* Stats Bar */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--card-bg); border-radius: 12px; padding: 18px 22px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .stat-card span { font-size: 13px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .stat-card h3 { font-size: 28px; color: var(--navy); margin-top: 6px; font-weight: 700; }
+
+        /* Navigation Tabs */
+        .tab-bar { display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 2px; }
+        .tab-btn { background: none; border: none; font-size: 15px; font-weight: 600; padding: 10px 18px; color: var(--text-muted); cursor: pointer; border-radius: 8px 8px 0 0; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Form Card */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 28px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+        .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #334155; }
+        .field input, .field select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fff; transition: border-color 0.2s; }
+        .field input:focus, .field select:focus { outline: none; border-color: var(--primary); ring: 2px solid #bae6fd; }
+        
+        .btn-submit { margin-top: 24px; background: var(--primary); color: white; font-weight: 600; font-size: 15px; border: none; padding: 13px 28px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .btn-submit:hover { background: var(--primary-dark); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Result Banner */
+        .result-box { display: none; margin-top: 24px; padding: 22px; border-radius: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; }
+        .result-box h4 { color: #166534; font-size: 14px; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+        .result-box .time { font-size: 36px; font-weight: 800; color: #15803d; }
+        .result-box p { color: #166534; font-size: 13px; margin-top: 6px; }
+
+        /* Queue Table */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { background: #f1f5f9; padding: 12px 16px; font-weight: 600; color: #475569; border-bottom: 2px solid var(--border); }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: #334155; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+        .status-Waiting { background: #fef3c7; color: #b45309; }
+        .status-WithDoctor { background: #e0e7ff; color: #4338ca; }
+        .status-Completed { background: #dcfce7; color: #15803d; }
+
+        .status-select { font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); }
+        #error-msg { color: #dc2626; margin-top: 14px; font-weight: 500; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="title-row">
+        <div>
+            <h1>Emergency Dept Patient Queue & Predictor</h1>
+            <p>AI-Powered Wait Time Estimation with PostgreSQL Persistence</p>
+        </div>
+        <div class="badge-live">PostgreSQL Connected</div>
+    </div>
+</header>
+
+<main>
+    <!-- Top Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span>Total Intake</span>
+            <h3 id="stat-intake">--</h3>
+        </div>
+        <div class="stat-card">
+            <span>Currently Waiting</span>
+            <h3 id="stat-waiting">--</h3>
+        </div>
+        <div class="stat-card">
+            <span>Avg Estimated Wait</span>
+            <h3 id="stat-avg">-- min</h3>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(event, 'intake-tab')">Patient Intake & Predict</button>
+        <button class="tab-btn" onclick="switchTab(event, 'queue-tab'); loadQueue();">Live Queue (PostgreSQL)</button>
+    </div>
+
+    <!-- TAB 1: Intake & Prediction -->
+    <div id="intake-tab" class="tab-content active">
+        <div class="card">
+            <h2 style="font-size: 18px; margin-bottom: 20px; color: var(--navy);">Patient Clinical & Triage Details</h2>
+            <form id="predictForm">
+                <div class="grid">
+                    <div class="field">
+                        <label for="triage_level">Triage Level (1 = Resuscitation, 5 = Non-urgent)</label>
+                        <select id="triage_level" required>
+                            <option value="">Select Level</option>
+                            <option value="1">Level 1 - Immediate Resuscitation</option>
+                            <option value="2">Level 2 - Emergent</option>
+                            <option value="3" selected>Level 3 - Urgent</option>
+                            <option value="4">Level 4 - Less Urgent</option>
+                            <option value="5">Level 5 - Non-Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="chief_complaint">Chief Complaint</label>
+                        <input id="chief_complaint" required placeholder="e.g. Chest Pain, Shortness of Breath" value="Chest Pain">
+                    </div>
+
+                    <div class="field">
+                        <label for="department">Department</label>
+                        <input id="department" required placeholder="e.g. Emergency" value="Emergency">
+                    </div>
+
+                    <div class="field">
+                        <label for="attending_physician">Attending Physician</label>
+                        <input id="attending_physician" required placeholder="e.g. Dr. Smith" value="Dr. Smith">
+                    </div>
+
+                    <div class="field">
+                        <label for="patient_age">Patient Age</label>
+                        <input id="patient_age" type="number" min="0" max="120" required value="48">
+                    </div>
+
+                    <div class="field">
+                        <label for="patient_gender">Patient Gender</label>
+                        <select id="patient_gender" required>
+                            <option value="Male" selected>Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="insurance_type">Insurance Type</label>
+                        <input id="insurance_type" required placeholder="e.g. Medicare, Private" value="Medicare">
+                    </div>
+
+                    <div class="field">
+                        <label for="length_of_stay_hrs">Expected Length of Stay (hrs)</label>
+                        <input id="length_of_stay_hrs" type="number" step="0.1" min="0" required value="3.5">
+                    </div>
+
+                    <div class="field">
+                        <label for="disposition">Disposition</label>
+                        <input id="disposition" required placeholder="e.g. Admitted, Discharged" value="Discharged">
+                    </div>
+
+                    <div class="field">
+                        <label for="readmitted_30d">Readmitted Within 30 Days</label>
+                        <select id="readmitted_30d" required>
+                            <option value="0" selected>No</option>
+                            <option value="1">Yes</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="satisfaction_score">Historical Satisfaction Score (1-5)</label>
+                        <input id="satisfaction_score" type="number" step="0.1" min="1" max="5" required value="4.2">
+                    </div>
+
+                    <div class="field">
+                        <label for="arrival_hour">Arrival Hour (0 - 23)</label>
+                        <input id="arrival_hour" type="number" min="0" max="23" required value="14">
+                    </div>
+
+                    <div class="field">
+                        <label for="arrival_dayofweek">Arrival Day (0 = Sun, 6 = Sat)</label>
+                        <input id="arrival_dayofweek" type="number" min="0" max="6" required value="2">
+                    </div>
+
+                    <div class="field">
+                        <label for="arrival_month">Arrival Month (1 - 12)</label>
+                        <input id="arrival_month" type="number" min="1" max="12" required value="10">
+                    </div>
+
+                    <div class="field">
+                        <label for="age_group">Age Group</label>
+                        <input id="age_group" required placeholder="e.g. Adult, Senior" value="Adult">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnPredict" class="btn-submit">Generate Wait Estimate & Log to Database</button>
+                <div id="error-msg"></div>
+
+                <div id="resultBox" class="result-box">
+                    <h4>Estimated Doctor Waiting Time</h4>
+                    <div id="predictedTime" class="time">-- minutes</div>
+                    <p id="recordStatusTag">Logged into PostgreSQL database</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TAB 2: PostgreSQL Queue History -->
+    <div id="queue-tab" class="tab-content">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h2 style="font-size: 18px; color: var(--navy);">Emergency Room Queue (Stored in PostgreSQL)</h2>
+                <button onclick="loadQueue()" style="background:#f1f5f9; border:1px solid var(--border); padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600;">Refresh</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Record #</th>
+                            <th>Time Logged</th>
+                            <th>Triage</th>
+                            <th>Complaint</th>
+                            <th>Age / Sex</th>
+                            <th>Est. Wait</th>
+                            <th>Queue Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queue-body">
+                        <tr><td colspan="7" style="text-align:center;">Loading queue records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    function switchTab(e, tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if (e && e.target) {
+            e.target.classList.add('active');
+        }
+    }
+
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+            document.getElementById('stat-intake').innerText = data.total_intake;
+            document.getElementById('stat-waiting').innerText = data.current_waiting;
+            document.getElementById('stat-avg').innerText = data.avg_wait_min + " min";
+        } catch (e) { console.error("Stats error", e); }
+    }
+
+    async function loadQueue() {
+        try {
+            const res = await fetch('/api/queue');
+            const records = await res.json();
+            const tbody = document.getElementById('queue-body');
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No patients logged yet. Run a prediction to create your first record.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = records.map(r => `
+                <tr>
+                    <td><strong>#${r.id}</strong></td>
+                    <td>${r.created_at}</td>
+                    <td><span class="status-badge" style="background:#e0f2fe; color:#0369a1;">Level ${r.triage_level}</span></td>
+                    <td>${r.chief_complaint}</td>
+                    <td>${r.patient_age} (${r.patient_gender[0]})</td>
+                    <td><strong>${r.predicted_wait_min} min</strong></td>
+                    <td>
+                        <select class="status-select" onchange="updateRecordStatus(${r.id}, this.value)">
+                            <option value="Waiting" ${r.queue_status === 'Waiting' ? 'selected' : ''}>Waiting</option>
+                            <option value="With Doctor" ${r.queue_status === 'With Doctor' ? 'selected' : ''}>With Doctor</option>
+                            <option value="Completed" ${r.queue_status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
+            loadStats();
+        } catch (e) {
+            console.error("Queue load error", e);
+        }
+    }
+
+    async function updateRecordStatus(recordId, newStatus) {
+        await fetch(`/api/queue/${recordId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        loadStats();
+    }
+
+    document.getElementById("predictForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById("btnPredict");
+        const err = document.getElementById("error-msg");
+        const resBox = document.getElementById("resultBox");
+        err.innerText = "";
+        btn.disabled = true;
+        btn.innerText = "Estimating & Saving to PostgreSQL...";
+
+        const numericFields = ["triage_level", "patient_age", "length_of_stay_hrs", "readmitted_30d", "satisfaction_score", "arrival_hour", "arrival_dayofweek", "arrival_month"];
+        const fields = ["triage_level", "chief_complaint", "department", "attending_physician", "patient_age", "patient_gender", "insurance_type", "length_of_stay_hrs", "disposition", "readmitted_30d", "satisfaction_score", "arrival_hour", "arrival_dayofweek", "arrival_month", "age_group"];
+
+        const payload = {};
+        fields.forEach(f => {
+            const val = document.getElementById(f).value.trim();
+            payload[f] = numericFields.includes(f) ? Number(val) : val;
+        });
+
+        try {
+            const resp = await fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || "Prediction request failed.");
+
+            document.getElementById("predictedTime").innerText = data.predicted_waiting_time_minutes + " minutes";
+            document.getElementById("recordStatusTag").innerText = `Saved to PostgreSQL as Patient Record #${data.record_id}`;
+            resBox.style.display = "block";
+            loadStats();
+        } catch (error) {
+            err.innerText = error.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Generate Wait Estimate & Log to Database";
+        }
+    });
+
+    // Initial load
+    loadStats();
+</script>
+</body>
+</html>

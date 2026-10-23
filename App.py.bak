@@ -1,0 +1,152 @@
+# ============================================================
+# PATIENT QUEUE WAIT TIME PREDICTOR
+# PHASE 2 - STEP 4A: FLASK BACKEND
+# ============================================================
+from flask import Flask, request, jsonify, render_template
+import pandas as pd
+import joblib
+import numpy as np
+import os
+
+app = Flask(__name__)
+
+# ------------------------------------------------------------
+# 1. LOAD SAVED MODEL AND METADATA
+# ------------------------------------------------------------
+
+MODEL_FILE = "best_wait_time_model.pkl"
+METADATA_FILE = "project_metadata.pkl"
+
+if not os.path.exists(MODEL_FILE):
+    raise FileNotFoundError(
+        "Model file not found: " + MODEL_FILE
+    )
+
+if not os.path.exists(METADATA_FILE):
+    raise FileNotFoundError(
+        "Metadata file not found: " + METADATA_FILE
+    )
+
+model = joblib.load(MODEL_FILE)
+metadata = joblib.load(METADATA_FILE)
+
+FEATURE_COLUMNS = metadata["feature_columns"]
+TARGET_COLUMN = metadata["target_column"]
+MODEL_NAME = metadata["model_name"]
+
+
+# ------------------------------------------------------------
+# 2. HOME ROUTE
+# ------------------------------------------------------------
+
+# HOME PAGE ROUTE
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("index.html")
+
+
+# ------------------------------------------------------------
+# 3. DISPLAY REQUIRED FEATURES
+# ------------------------------------------------------------
+
+@app.route("/features", methods=["GET"])
+def get_features():
+    return jsonify({
+        "required_features": FEATURE_COLUMNS,
+        "total_features": len(FEATURE_COLUMNS),
+        "prediction_target": TARGET_COLUMN
+    })
+
+
+# ------------------------------------------------------------
+# 4. PREDICTION ROUTE
+# ------------------------------------------------------------
+
+@app.route("/predict", methods=["POST"])
+def predict():
+
+    try:
+        patient_data = request.get_json(silent=True)
+
+        if not isinstance(patient_data, dict):
+            return jsonify({
+                "error": "Send patient data as a JSON object."
+            }), 400
+
+        # Check for missing input features
+        missing_features = [
+            col for col in FEATURE_COLUMNS
+            if col not in patient_data
+        ]
+
+        if missing_features:
+            return jsonify({
+                "error": "Some required features are missing.",
+                "missing_features": missing_features
+            }), 400
+
+        # Arrange input in the original training order
+        input_df = pd.DataFrame(
+            [[patient_data[col] for col in FEATURE_COLUMNS]],
+            columns=FEATURE_COLUMNS
+        )
+
+        # Predict waiting time
+        prediction = float(model.predict(input_df)[0])
+
+        if not np.isfinite(prediction) or prediction < 0:
+            return jsonify({
+                "error": "The model returned an invalid prediction."
+            }), 500
+
+        return jsonify({
+            "model": MODEL_NAME,
+            "predicted_waiting_time_minutes": round(
+                prediction, 2
+            ),
+            "unit": "minutes",
+            "notice": (
+                "This is a model estimate, not a confirmed "
+                "hospital waiting time."
+            )
+        })
+
+    except (TypeError, ValueError) as error:
+        return jsonify({
+            "error": "Invalid patient input.",
+            "details": str(error)
+        }), 400
+
+    except Exception as error:
+        app.logger.exception("Prediction failed")
+        return jsonify({
+            "error": "Prediction could not be completed.",
+            "details": str(error)
+        }), 500
+
+
+
+# ============================================================
+# START FLASK SERVER
+# ============================================================
+
+if __name__ == "__main__":
+    print("Patient Queue Wait Time Predictor")
+    print("Model:", MODEL_NAME)
+    print("Target:", TARGET_COLUMN)
+    print("Number of features:", len(FEATURE_COLUMNS))
+    print("Starting Flask server...")
+
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=False,
+        use_reloader=False
+    )
+
+    
+    
+    
+    
+
+

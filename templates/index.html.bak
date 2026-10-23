@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Queue Wait Time Predictor</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        header {
+            background: #123b5d;
+            color: white;
+            padding: 24px 7%;
+        }
+        
+        header h1 {
+            margin: 0 0 8px;
+            font-size: 26px;
+        }
+
+        header p {
+            margin: 0;
+            color: #dbeafe;
+        }
+
+        main {
+            max-width: 1050px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .notice {
+            background: #e0f2fe;
+            border-left: 4px solid #0284c7;
+            padding: 14px;
+            border-radius: 6px;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #0000000d;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            color: #123b5d;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: white;
+            font-size: 15px;
+        }
+
+        input:focus, select:focus {
+            outline: 2px solid #7dd3fc;
+            border-color: #0284c7;
+        }
+
+        .field {
+            min-width: 0;
+        }
+
+        button {
+            margin-top: 24px;
+            background: #087e8b;
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            border-radius: 7px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #066773;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        #result {
+            display: none;
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 9px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+        }
+
+        #result h3 {
+            margin-top: 0;
+        }
+
+        #prediction {
+            font-size: 32px;
+            font-weight: bold;
+            color: #047857;
+        }
+
+        #error {
+            color: #b91c1c;
+            margin-top: 18px;
+        }
+
+        footer {
+            text-align: center;
+            color: #64748b;
+            padding: 25px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 650px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<header>
+    <h1>Patient Queue Wait Time Predictor</h1>
+    <p>Machine-learning-based doctor waiting-time estimation</p>
+</header>
+
+<main>
+    <div class="notice">
+        Enter the required patient and visit details to estimate
+        doctor waiting time. This tool provides an experimental
+        model estimate and must not be used for clinical triage
+        or emergency-care decisions.
+    </div>
+
+    <section class="panel">
+        <h2>Patient and Visit Details</h2>
+
+        <form id="patientForm">
+            <div class="grid">
+
+                <div class="field">
+                    <label for="triage_level">Triage Level</label>
+                    <select id="triage_level" required>
+                        <option value="">Select level</option>
+                        <option value="1">Level 1</option>
+                        <option value="2">Level 2</option>
+                        <option value="3">Level 3</option>
+                        <option value="4">Level 4</option>
+                        <option value="5">Level 5</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="chief_complaint">Chief Complaint</label>
+                    <input id="chief_complaint" required
+                           placeholder="Use a category from your dataset">
+                </div>
+
+                <div class="field">
+                    <label for="department">Department</label>
+                    <input id="department" required
+                           placeholder="e.g. Emergency">
+                </div>
+
+                <div class="field">
+                    <label for="attending_physician">Attending Physician</label>
+                    <input id="attending_physician" required
+                           placeholder="Use a category from your dataset">
+                </div>
+
+                <div class="field">
+                    <label for="patient_age">Patient Age</label>
+                    <input id="patient_age" type="number"
+                           min="0" max="120" required>
+                </div>
+
+                <div class="field">
+                    <label for="patient_gender">Patient Gender</label>
+                    <select id="patient_gender" required>
+                        <option value="">Select gender category</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="insurance_type">Insurance Type</label>
+                    <input id="insurance_type" required
+                           placeholder="Use a category from your dataset">
+                </div>
+
+                <div class="field">
+                    <label for="length_of_stay_hrs">Length of Stay (hours)</label>
+                    <input id="length_of_stay_hrs" type="number"
+                           min="0" step="any" required>
+                </div>
+
+                <div class="field">
+                    <label for="disposition">Disposition</label>
+                    <input id="disposition" required
+                           placeholder="Use a category from your dataset">
+                </div>
+
+                <div class="field">
+                    <label for="readmitted_30d">Readmitted Within 30 Days</label>
+                    <select id="readmitted_30d" required>
+                        <option value="">Select</option>
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="satisfaction_score">Satisfaction Score</label>
+                    <input id="satisfaction_score" type="number"
+                           min="0" step="any" required>
+                </div>
+
+                <div class="field">
+                    <label for="billed_amount_usd">Billed Amount (USD)</label>
+                    <input id="billed_amount_usd" type="number"
+                           min="0" step="any" required>
+                </div>
+
+                <div class="field">
+                    <label for="arrival_hour">Arrival Hour (0–23)</label>
+                    <input id="arrival_hour" type="number"
+                           min="0" max="23" required>
+                </div>
+
+                <div class="field">
+                    <label for="arrival_dayofweek">Arrival Day (0–6)</label>
+                    <input id="arrival_dayofweek" type="number"
+                           min="0" max="6" required>
+                </div>
+
+                <div class="field">
+                    <label for="arrival_month">Arrival Month (1–12)</label>
+                    <input id="arrival_month" type="number"
+                           min="1" max="12" required>
+                </div>
+
+                <div class="field">
+                    <label for="age_group">Age Group</label>
+                    <input id="age_group" required
+                           placeholder="Use a category from your dataset">
+                </div>
+
+            </div>
+
+            <button type="submit" id="predictButton">
+                Predict Waiting Time
+            </button>
+
+            <p id="error" role="alert"></p>
+
+            <div id="result" aria-live="polite">
+                <h3>Estimated Doctor Waiting Time</h3>
+                <div id="prediction">-- minutes</div>
+                <p>This is a model-generated estimate, not a guaranteed
+                   waiting time.</p>
+            </div>
+        </form>
+    </section>
+</main>
+
+<footer>
+    Patient Queue Wait Time Predictor | Academic Project
+</footer>
+
+<script>
+    const form = document.getElementById("patientForm");
+    const button = document.getElementById("predictButton");
+    const errorBox = document.getElementById("error");
+    const resultBox = document.getElementById("result");
+
+    const numericFields = [
+        "triage_level",
+        "patient_age",
+        "length_of_stay_hrs",
+        "readmitted_30d",
+        "satisfaction_score",
+        "arrival_hour",
+        "arrival_dayofweek",
+        "arrival_month"
+    ];
+
+    form.addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        errorBox.textContent = "";
+        resultBox.style.display = "none";
+        button.disabled = true;
+        button.textContent = "Predicting...";
+
+        try {
+            const data = {};
+
+            const fields = [
+                "triage_level",
+                "chief_complaint",
+                "department",
+                "attending_physician",
+                "patient_age",
+                "patient_gender",
+                "insurance_type",
+                "length_of_stay_hrs",
+                "disposition",
+                "readmitted_30d",
+                "satisfaction_score",
+                "arrival_hour",
+                "arrival_dayofweek",
+                "arrival_month",
+                "age_group"
+            ];
+
+            for (const field of fields) {
+                const element = document.getElementById(field);
+                const value = element.value.trim();
+
+                if (value === "") {
+                    throw new Error("Please fill in all fields.");
+                }
+
+                data[field] = numericFields.includes(field)
+                    ? Number(value)
+                    : value;
+            }
+
+            const response = await fetch("/predict", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            });
+
+            const output = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    output.error +
+                    (output.missing_features
+                        ? ": " + output.missing_features.join(", ")
+                        : "")
+                );
+            }
+
+            document.getElementById("prediction").textContent =
+                output.predicted_waiting_time_minutes + " minutes";
+
+            resultBox.style.display = "block";
+
+        } catch (error) {
+            errorBox.textContent = error.message;
+        } finally {
+            button.disabled = false;
+            button.textContent = "Predict Waiting Time";
+        }
+    });
+</script>
+</body>
+</html>
+
